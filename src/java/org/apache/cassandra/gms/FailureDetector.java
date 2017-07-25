@@ -194,8 +194,9 @@ public class FailureDetector implements IFailureDetector, FailureDetectorMBean
 
     private void appendEndpointState(StringBuilder sb, EndpointState endpointState)
     {
-        sb.append("  generation:").append(endpointState.getHeartBeatState().getGeneration()).append("\n");
-        sb.append("  heartbeat:").append(endpointState.getHeartBeatState().getHeartBeatVersion()).append("\n");
+        HeartBeatStateValue hbsValue = endpointState.getHeartBeatStateValue();
+        sb.append("  generation:").append(hbsValue.generation).append("\n");
+        sb.append("  heartbeat:").append(hbsValue.version).append("\n");
         for (Map.Entry<ApplicationState, VersionedValue> state : endpointState.states())
         {
             if (state.getKey() == ApplicationState.TOKENS)

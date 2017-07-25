@@ -33,6 +33,7 @@ class HeartBeatState
 
     private volatile int generation;
     private volatile int version;
+    private volatile HeartBeatStateValue hbsValue;
 
     HeartBeatState(int gen)
     {
@@ -43,6 +44,7 @@ class HeartBeatState
     {
         generation = gen;
         version = ver;
+        updateHeartBeatStateValue();
     }
 
     int getGeneration()
@@ -50,9 +52,15 @@ class HeartBeatState
         return generation;
     }
 
-    void updateHeartBeat()
+    synchronized void updateHeartBeat()
     {
         version = VersionGenerator.getNextVersion();
+        updateHeartBeatStateValue();
+    }
+
+    private synchronized void updateHeartBeatStateValue()
+    {
+        hbsValue = new HeartBeatStateValue(generation, version);
     }
 
     int getHeartBeatVersion()
@@ -60,19 +68,25 @@ class HeartBeatState
         return version;
     }
 
-    void forceNewerGenerationUnsafe()
+    synchronized void forceNewerGenerationUnsafe()
     {
         generation += 1;
+        updateHeartBeatStateValue();
     }
 
-    void forceHighestPossibleVersionUnsafe()
+    synchronized void forceHighestPossibleVersionUnsafe()
     {
         version = Integer.MAX_VALUE;
+        updateHeartBeatStateValue();
     }
 
     public String toString()
     {
         return String.format("HeartBeat: generation = %d, version = %d", generation, version);
+    }
+
+    public HeartBeatStateValue getValue() {
+        return hbsValue;
     }
 }
 
@@ -92,5 +106,16 @@ class HeartBeatStateSerializer implements IVersionedSerializer<HeartBeatState>
     public long serializedSize(HeartBeatState state, int version)
     {
         return TypeSizes.sizeof(state.getGeneration()) + TypeSizes.sizeof(state.getHeartBeatVersion());
+    }
+}
+
+class HeartBeatStateValue
+{
+    public final int generation;
+    public final int version;
+
+    HeartBeatStateValue(int gen, int ver) {
+        generation = gen;
+        version = ver;
     }
 }

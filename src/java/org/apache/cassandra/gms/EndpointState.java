@@ -62,9 +62,31 @@ public class EndpointState
         isAlive = true;
     }
 
+    /**
+     * Gets a reference to the current instance of the HeartBeatState class for this Endpoint.
+     * NOTE: This is a live, mutable reference to the heartBeatState instance. Changes made to it
+     * are reflected in the endpoint, and other threads may change its values (Version and Generation)
+     * between the time you retrieve the instance and when you use the values. If you need a consistent
+     * snapshot of the Version/Generation that is immutable, use the {@link #getHeartBeatStateValue} method instead.
+     * @return the live, mutable HeartBeatState instance for this endpoint.
+     */
     HeartBeatState getHeartBeatState()
     {
         return hbState;
+    }
+
+    /**
+     * Gets an immutable HeartBeatStateValue instance which snapshots the
+     * Generation and Version values at the time of the call. Use this when
+     * your code requires a consistent view of the HeartBeatState's internal value
+     * to avoid race conditions where the mutable HeartBeatState can change between
+     * calls to {@link #getHeartBeatState}. If you need to mutate the values in the HeartBeatState,
+     * use that method instead.
+     * @return  an instance of a HeartBeatStateValue object capturing the Version and Generation
+     *          of the HeartBeatState at the time the call was made.
+     */
+    HeartBeatStateValue getHeartBeatStateValue() {
+        return hbState.getValue();
     }
 
     void setHeartBeatState(HeartBeatState newHbState)

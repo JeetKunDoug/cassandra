@@ -385,7 +385,7 @@ public class Gossiper implements IFailureDetectionEventListener, GossiperMBean
      */
     int getMaxEndpointStateVersion(EndpointState epState)
     {
-        int maxVersion = epState.getHeartBeatState().getHeartBeatVersion();
+        int maxVersion = epState.getHeartBeatStateValue().version;
         for (Map.Entry<ApplicationState, VersionedValue> state : epState.states())
             maxVersion = Math.max(maxVersion, state.getValue().version);
         return maxVersion;
@@ -497,7 +497,7 @@ public class Gossiper implements IFailureDetectionEventListener, GossiperMBean
             epState = endpointStateMap.get(endpoint);
             if (epState != null)
             {
-                generation = epState.getHeartBeatState().getGeneration();
+                generation = epState.getHeartBeatStateValue().generation;
                 maxVersion = getMaxEndpointStateVersion(epState);
             }
             gDigests.add(new GossipDigest(endpoint, generation, maxVersion));
@@ -594,18 +594,22 @@ public class Gossiper implements IFailureDetectionEventListener, GossiperMBean
         }
         else
         {
-            int generation = epState.getHeartBeatState().getGeneration();
-            int heartbeat = epState.getHeartBeatState().getHeartBeatVersion();
+            HeartBeatStateValue oldHeartBeatState = epState.getHeartBeatStateValue();
+            int generation = oldHeartBeatState.generation;
+            int heartbeat = oldHeartBeatState.version;
             logger.info("Sleeping for {}ms to ensure {} does not change", StorageService.RING_DELAY, endpoint);
             Uninterruptibles.sleepUninterruptibly(StorageService.RING_DELAY, TimeUnit.MILLISECONDS);
             // make sure it did not change
             EndpointState newState = endpointStateMap.get(endpoint);
             if (newState == null)
                 logger.warn("Endpoint {} disappeared while trying to assassinate, continuing anyway", endpoint);
-            else if (newState.getHeartBeatState().getGeneration() != generation)
-                throw new RuntimeException("Endpoint still alive: " + endpoint + " generation changed while trying to assassinate it");
-            else if (newState.getHeartBeatState().getHeartBeatVersion() != heartbeat)
-                throw new RuntimeException("Endpoint still alive: " + endpoint + " heartbeat changed while trying to assassinate it");
+            else {
+                HeartBeatStateValue newHeartbeatState = newState.getHeartBeatStateValue();
+                if (newHeartbeatState.generation != generation)
+                    throw new RuntimeException("Endpoint still alive: " + endpoint + " generation changed while trying to assassinate it");
+                else if (newHeartbeatState.version != heartbeat)
+                    throw new RuntimeException("Endpoint still alive: " + endpoint + " heartbeat changed while trying to assassinate it");
+            }
             epState.updateTimestamp(); // make sure we don't evict it too soon
             epState.getHeartBeatState().forceNewerGenerationUnsafe();
         }
@@ -636,7 +640,7 @@ public class Gossiper implements IFailureDetectionEventListener, GossiperMBean
 
     public int getCurrentGenerationNumber(InetAddress endpoint)
     {
-        return endpointStateMap.get(endpoint).getHeartBeatState().getGeneration();
+        return endpointStateMap.get(endpoint).getHeartBeatStateValue().generation;
     }
 
     /**
@@ -896,8 +900,9 @@ public class Gossiper implements IFailureDetectionEventListener, GossiperMBean
              * than the version passed in. In this case we also send the old
              * heart beat and throw it away on the receiver if it is redundant.
             */
-            int localHbGeneration = epState.getHeartBeatState().getGeneration();
-            int localHbVersion = epState.getHeartBeatState().getHeartBeatVersion();
+            HeartBeatStateValue localHbValue = epState.getHeartBeatStateValue();
+            int localHbGeneration = localHbValue.generation;
+            int localHbVersion = localHbValue.version;
             if (localHbVersion > version)
             {
                 reqdEndpointState = new EndpointState(new HeartBeatState(localHbGeneration, localHbVersion));
