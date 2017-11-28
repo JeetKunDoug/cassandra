@@ -20,8 +20,6 @@ default_env_vars: &default_env_vars
 high_capacity_env_vars: &high_capacity_env_vars
     <<: *default_env_vars
     CCM_MAX_HEAP_SIZE: 3072M
-env_vars: &env_vars
-    <<: *default_env_vars
 # Settings for users who do not have a paid CircleCI account
 default_env_settings: &default_env_settings
     resource_class: medium
@@ -30,9 +28,6 @@ default_env_settings: &default_env_settings
 high_capacity_env_settings: &high_capacity_env_settings
     resource_class: xlarge
     parallelism: 100
-# Now, we only need to change these to their high_capacity versions to change everything
-env_settings: &env_settings
-    <<: *default_env_settings
 default_jobs: &default_jobs
         jobs:
             - build
@@ -48,9 +43,14 @@ with_dtests_jobs: &with_dtest_jobs
             - dtests:
                   requires:
                       - unit_tests
+# Set env_settings, env_vars, and workflows/build_and_run_tests based on environment
+env_settings: &env_settings
+    <<: *default_env_settings # *high_capacity_env_settings
+env_vars: &env_vars
+    <<: *default_env_vars # *high_capacity_env_vars
 workflows:
     version: 2
-    build_and_run_tests: *default_jobs
+    build_and_run_tests: *default_jobs # *with_dtest_jobs
 version: 2
 jobs:
   build:
