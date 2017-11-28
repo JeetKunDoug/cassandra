@@ -26,7 +26,25 @@ high_capacity_env_settings: &high_capacity_env_settings
     parallelism: 100
 # Now, we only need to change these to their high_capacity versions to change everything
 env_settings: &env_settings
-    <<: *high_capacity_env_settings
+    <<: *default_env_settings
+default_jobs: &default_jobs
+        jobs:
+            - build
+            - unit_tests:
+                  requires:
+                      - build
+with_dtests_jobs: &with_dtest_jobs 
+        jobs:
+            - build
+            - unit_tests:
+                  requires:
+                      - build
+            - dtests:
+                  requires:
+                      - unit_tests
+workflows:
+    version: 2
+    build_and_run_tests: *default_jobs
 version: 2
 jobs:
   build:
@@ -254,21 +272,3 @@ jobs:
       - store_artifacts:
           path: ~/cassandra-dtest/logs
           destination: dtest_logs
-default_jobs: &default_jobs
-  jobs:
-    - build
-    - unit_tests:
-      requires:
-        - build
-with_dtests_jobs: &with_dtest_jobs 
-        jobs:
-            - build
-            - unit_tests:
-                  requires:
-                      - build
-            - dtests:
-                  requires:
-                      - unit_tests
-workflows:
-    version: 2
-    build_and_run_tests: *with_dtest_jobs
