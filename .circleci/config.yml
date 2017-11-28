@@ -19,24 +19,19 @@ env_vars: &env_vars
 # Settings for users who do not have a paid CircleCI account
 default_env_settings: &default_env_settings
     resource_class: medium
-default_parallel_env_settings: &default_parallel_env_settings
-    <<: *default_env_settings
     parallelism: 4
 # Settings for users with high-capacity, paid CircleCI account
 high_capacity_env_settings: &high_capacity_env_settings
     resource_class: xlarge
-high_capacity_parallel_env_settings: &high_capacity_parallel_env_settings
-    <<: *high_capacity_env_settings
     parallelism: 100
 # Now, we only need to change these to their high_capacity versions to change everything
 env_settings: &env_settings
     <<: *high_capacity_env_settings
-parallel_env_settings: &parallel_env_settings
-    <<: *high_capacity_parallel_env_settings
 version: 2
 jobs:
   build:
     <<: *env_settings
+    parallelism: 1 # This job doesn't benefit from parallelism
     working_directory: ~/
     shell: /bin/bash -eo pipefail -l
     docker:
@@ -95,7 +90,7 @@ jobs:
                 - cassandra
                 - .m2
   unit_tests:
-    <<: *parallel_env_settings
+    <<: *env_settings
     working_directory: ~/
     shell: /bin/bash -eo pipefail -l
     docker:
@@ -144,7 +139,7 @@ jobs:
           path: ~/cassandra/build/test/logs
           destination: logs
   dtests:
-    <<: *parallel_env_settings
+    <<: *env_settings
     working_directory: ~/
     shell: /bin/bash -eo pipefail -l
     docker:
@@ -259,9 +254,13 @@ jobs:
       - store_artifacts:
           path: ~/cassandra-dtest/logs
           destination: dtest_logs
-workflows:
-    version: 2
-    build_and_run_tests:
+default_jobs: &default_jobs
+  jobs:
+    - build
+    - unit_tests:
+      requires:
+        - build
+with_dtests_jobs: &with_dtest_jobs 
         jobs:
             - build
             - unit_tests:
@@ -270,3 +269,6 @@ workflows:
             - dtests:
                   requires:
                       - unit_tests
+workflows:
+    version: 2
+    build_and_run_tests: *with_dtest_jobs
