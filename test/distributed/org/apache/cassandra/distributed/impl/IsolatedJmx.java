@@ -19,6 +19,7 @@
 package org.apache.cassandra.distributed.impl;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -84,6 +85,9 @@ public class IsolatedJmx
             String hostname = addr.getHostAddress();
             wrapper = new MBeanWrapper.InstanceMBeanWrapper(hostname + ":" + jmxPort);
             ((MBeanWrapper.DelegatingMbeanWrapper) MBeanWrapper.instance).setDelegate(wrapper);
+            // Register management mbeans we expose to clients
+            wrapper.registerMBean(ManagementFactory.getRuntimeMXBean(), ManagementFactory.RUNTIME_MXBEAN_NAME);
+            wrapper.registerMBean(ManagementFactory.getMemoryMXBean(), ManagementFactory.MEMORY_MXBEAN_NAME);
             Map<String, Object> env = new HashMap<>();
 
             serverSocketFactory = new CollectingRMIServerSocketFactoryImpl(addr);
